@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full bg-stone-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KnitTrack Pro - 파트별 뜨개질 프로젝트 관리자</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            yarn: {
+              cream: '#fbf9f5',
+              sand: '#f2e8dc',
+              warm: '#d8c3af',
+              terracotta: '#b86b53',
+              olive: '#78866b',
+              navy: '#425365',
+              dark: '#38302b'
+            }
+          },
+          fontFamily: {
+            serif: ['"Gowun Batang"', 'serif'],
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f7f4ef;
+    }
+    .font-serif-title {
+      font-family: 'Gowun Batang', serif;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .touch-manipulation {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col text-stone-800 selection:bg-yarn-sand">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-yarn-cream/90 backdrop-blur-md border-b border-yarn-sand/80 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-yarn-terracotta flex items-center justify-center text-white shadow-sm">
+          <i class="fa-solid fa-scroll text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold font-serif-title text-yarn-dark tracking-tight">KnitTrack Pro</h1>
+          <p class="text-xs text-stone-500 hidden sm:block">파트별 단수 & 일정 관리 뜨개 노트</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Global Search -->
+        <div class="relative hidden md:block w-48 lg:w-60">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs"></i>
+          <input type="text" id="searchInput" oninput="renderDashboard()" placeholder="프로젝트, 실, 바늘 검색..." 
+                 class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-stone-200 rounded-full focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/40 transition">
+        </div>
+
+        <button onclick="openProjectModal()" class="px-4 py-2 bg-yarn-terracotta hover:bg-yarn-terracotta/90 active:scale-95 text-white font-medium text-xs sm:text-sm rounded-full shadow-sm transition flex items-center gap-1.5">
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>새 프로젝트</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Mobile Search -->
+    <div class="md:hidden">
+      <div class="relative w-full">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs"></i>
+        <input type="text" id="mobileSearchInput" oninput="syncMobileSearch(this.value)" placeholder="프로젝트, 실 검색..." 
+               class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/40">
+      </div>
+    </div>
+
+    <!-- Filter Header -->
+    <section class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-sm p-4 rounded-3xl border border-yarn-sand/60 shadow-xs">
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <button onclick="setFilterStatus('ALL')" id="filter-ALL" class="filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-semibold bg-yarn-dark text-white shadow-xs">
+          전체 <span id="count-all" class="ml-1 opacity-70">0</span>
+        </button>
+        <button onclick="setFilterStatus('IN_PROGRESS')" id="filter-IN_PROGRESS" class="filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-medium text-stone-600 hover:bg-yarn-sand/50 transition">
+          🧶 진행 중 <span id="count-in-progress" class="ml-1 text-stone-400">0</span>
+        </button>
+        <button onclick="setFilterStatus('PAUSED')" id="filter-PAUSED" class="filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-medium text-stone-600 hover:bg-yarn-sand/50 transition">
+          ☕ 일시정지 <span id="count-paused" class="ml-1 text-stone-400">0</span>
+        </button>
+        <button onclick="setFilterStatus('COMPLETED')" id="filter-COMPLETED" class="filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-medium text-stone-600 hover:bg-yarn-sand/50 transition">
+          ✨ 완료 <span id="count-completed" class="ml-1 text-stone-400">0</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 self-end sm:self-auto text-xs">
+        <label for="categoryFilter" class="text-stone-500 font-medium">카테고리:</label>
+        <select id="categoryFilter" onchange="renderDashboard()" class="bg-white border border-stone-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-yarn-terracotta">
+          <option value="ALL">전체 카테고리</option>
+          <option value="의류">의류 (스웨터/가디건)</option>
+          <option value="모자">모자/비니</option>
+          <option value="목도리">목도리/숄</option>
+          <option value="가방">가방/파우치</option>
+          <option value="양말">양말/장갑</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Project Cards Grid -->
+    <section>
+      <div id="projectGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Cards loaded dynamically via JS -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center bg-white/60 rounded-3xl border-2 border-dashed border-yarn-sand my-4">
+        <div class="w-16 h-16 rounded-full bg-yarn-sand/60 flex items-center justify-center text-yarn-terracotta text-2xl mb-3">
+          <i class="fa-solid fa-scissors"></i>
+        </div>
+        <h3 class="text-base font-bold text-stone-700 font-serif-title">등록된 뜨개 프로젝트가 없습니다</h3>
+        <p class="text-xs text-stone-500 max-w-xs mt-1 mb-4">시작 일자와 목표 완료일, 부위별 목표 단수를 설정하여 체계적으로 뜨개질해보세요.</p>
+        <button onclick="openProjectModal()" class="px-4 py-2 bg-yarn-terracotta hover:bg-yarn-terracotta/90 text-white font-medium text-xs rounded-full shadow-xs">
+          + 첫 프로젝트 만들기
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Project Form Modal -->
+  <div id="projectModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-stone-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-xl overflow-hidden border border-stone-100 my-8 transition-all">
+      <div class="bg-yarn-cream px-6 py-4 border-b border-yarn-sand flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-pen-nib text-yarn-terracotta"></i>
+          <h3 id="modalTitle" class="text-base font-bold font-serif-title text-yarn-dark">새 프로젝트 만들기</h3>
+        </div>
+        <button onclick="closeProjectModal()" class="text-stone-400 hover:text-stone-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-100">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="projectForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <input type="hidden" id="formProjectId">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-stone-600 mb-1">작품명 <span class="text-rose-500">*</span></label>
+            <input type="text" id="formTitle" required placeholder="예: 탑다운 라글란 니트 스웨터" 
+                   class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">카테고리</label>
+            <select id="formCategory" class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+              <option value="의류">의류</option>
+              <option value="모자">모자</option>
+              <option value="목도리">목도리/숄</option>
+              <option value="가방">가방</option>
+              <option value="양말">양말/장갑</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Start Date & Target/Completed Date Inputs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-stone-50/80 p-3 rounded-2xl border border-stone-200/80">
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1 flex items-center gap-1">
+              <i class="fa-regular fa-calendar-plus text-yarn-terracotta"></i> 시작 일자
+            </label>
+            <input type="date" id="formStartDate" 
+                   class="w-full px-3 py-1.5 text-xs bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-700 mb-1 flex items-center gap-1">
+              <i class="fa-regular fa-calendar-check text-yarn-olive"></i> 목표 / 완료 일자
+            </label>
+            <input type="date" id="formTargetDate" 
+                   class="w-full px-3 py-1.5 text-xs bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">사용 실 정보</label>
+            <input type="text" id="formYarn" placeholder="예: 램스울 8ply (메인: 베이지 3볼)" 
+                   class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">사용 바늘</label>
+            <input type="text" id="formNeedle" placeholder="예: 대바늘 4.0mm (몸통) / 3.5mm (고무단)" 
+                   class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">게이지 (10cm x 10cm)</label>
+            <input type="text" id="formGauge" placeholder="예: 22코 30단" 
+                   class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-stone-600 mb-1">진행 상태</label>
+            <select id="formStatus" class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+              <option value="IN_PROGRESS">🧶 진행 중</option>
+              <option value="PAUSED">☕ 일시정지</option>
+              <option value="COMPLETED">✨ 완료</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Parts Input Builder -->
+        <div class="pt-2 border-t border-stone-100">
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-xs font-bold text-stone-700">
+              <i class="fa-solid fa-cubes text-yarn-terracotta mr-1"></i> 구성 파트 설정 (몸통, 소매, 목둘레 등)
+            </label>
+            <button type="button" onclick="addPartInputRow()" class="text-xs text-yarn-terracotta hover:underline font-medium">
+              + 파트 추가
+            </button>
+          </div>
+          
+          <div id="formPartsContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Dynamic Part Rows Added Here -->
+          </div>
+          <p class="text-[11px] text-stone-400 mt-1">* 각 파트별 목표 단수를 입력하면 전체 통합 진행률이 자동 산출됩니다.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">도안 링크 또는 참고 URL</label>
+          <input type="url" id="formPatternLink" placeholder="https://..." 
+                 class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-stone-600 mb-1">도안 수정사항 & 노트</label>
+          <textarea id="formNotes" rows="2" placeholder="예: 소매 고무단 5단 추가, neckline 코줍기 88코 진행 등 메모" 
+                    class="w-full px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-yarn-terracotta/50 resize-none"></textarea>
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-2 border-t border-stone-100">
+          <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-xs font-medium text-stone-500 hover:bg-stone-100 rounded-xl transition">취소</button>
+          <button type="submit" class="px-5 py-2 bg-yarn-terracotta hover:bg-yarn-terracotta/90 text-white text-xs font-semibold rounded-xl shadow-xs transition">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Counter & Detail Drawer Modal -->
+  <div id="counterDrawer" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-stone-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-stone-50 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-yarn-sand flex flex-col my-auto max-h-[92vh]">
+      
+      <!-- Drawer Header -->
+      <div class="bg-white px-5 py-4 border-b border-yarn-sand flex items-center justify-between">
+        <div class="flex items-center gap-2.5 truncate">
+          <span id="drawerCategoryTag" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-yarn-sand text-yarn-dark">의류</span>
+          <h2 id="drawerTitle" class="text-base font-bold font-serif-title text-stone-800 truncate">프로젝트 제목</h2>
+        </div>
+        <button onclick="closeCounterDrawer()" class="text-stone-400 hover:text-stone-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-100">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Drawer Content -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-5">
+
+        <!-- Date & D-Day Banner Header -->
+        <div class="bg-white p-4 rounded-2xl border border-yarn-sand/80 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-3">
+            <div>
+              <span class="text-stone-400 text-[10px] block">시작 일자</span>
+              <span id="drawerStartDate" class="font-semibold text-stone-700">-</span>
+            </div>
+            <i class="fa-solid fa-arrow-right text-stone-300 text-xs"></i>
+            <div>
+              <span class="text-stone-400 text-[10px] block">목표 / 완료 일자</span>
+              <span id="drawerTargetDate" class="font-semibold text-stone-700">-</span>
+            </div>
+          </div>
+          <div id="drawerDDayBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+            D-Day 계산 중
+          </div>
+        </div>
+
+        <!-- Total Progress Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-yarn-sand/80 shadow-xs">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <span class="font-bold text-stone-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-pie text-yarn-terracotta"></i> 전체 통합 진행률
+            </span>
+            <span id="drawerTotalProgressPercent" class="text-base font-extrabold text-yarn-terracotta font-serif-title">0%</span>
+          </div>
+          <div class="w-full bg-stone-100 h-3 rounded-full overflow-hidden">
+            <div id="drawerTotalProgressBar" class="bg-yarn-terracotta h-full transition-all duration-300 rounded-full" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Part Selector Tabs & Active Counter Card -->
+        <div class="bg-white rounded-2xl p-4 sm:p-6 border border-yarn-sand/80 shadow-xs relative">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <label class="text-xs font-bold text-stone-600 flex items-center gap-1">
+              <i class="fa-solid fa-scissors text-yarn-olive"></i> 작업 파트 선택:
+            </label>
+            <div id="drawerPartTabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              <!-- Dynamic Part Tab Buttons -->
+            </div>
+          </div>
+
+          <!-- Active Part Counter Display -->
+          <div class="bg-stone-50 rounded-2xl p-5 border border-stone-200/60 text-center relative">
+            <div id="activePartName" class="text-sm font-bold text-stone-700 font-serif-title mb-1">몸통 (Body)</div>
+            
+            <div class="flex items-center justify-center gap-2 my-1">
+              <span id="activePartCurrentRow" class="text-6xl sm:text-7xl font-extrabold text-stone-800 tracking-tight font-serif-title">0</span>
+              <span id="activePartTargetRow" class="text-lg font-semibold text-stone-400 self-end mb-2">/ 120단</span>
+            </div>
+
+            <!-- Active Part Progress Bar -->
+            <div class="w-full bg-stone-200/70 h-2 rounded-full overflow-hidden my-3">
+              <div id="activePartProgressBar" class="bg-yarn-olive h-full transition-all duration-300 rounded-full" style="width: 0%;"></div>
+            </div>
+
+            <!-- Hands-Free Large Counter Buttons (+1, +5, -1) -->
+            <div class="grid grid-cols-3 gap-2.5 mt-4">
+              <button onclick="adjustActivePartRow(-1)" class="py-3 bg-white border border-stone-300 hover:bg-stone-100 active:bg-stone-200 text-stone-700 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-1 transition touch-manipulation select-none shadow-xs">
+                <i class="fa-solid fa-minus text-xs"></i> 1단 차감
+              </button>
+              <button onclick="adjustActivePartRow(1)" class="py-3 bg-yarn-terracotta hover:bg-yarn-terracotta/90 active:bg-yarn-terracotta/80 text-white rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-1 shadow-md transition touch-manipulation select-none">
+                <i class="fa-solid fa-plus text-xs"></i> 1단 추가
+              </button>
+              <button onclick="adjustActivePartRow(5)" class="py-3 bg-yarn-olive hover:bg-yarn-olive/90 active:bg-yarn-olive/80 text-white rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-1 shadow-md transition touch-manipulation select-none">
+                <i class="fa-solid fa-angles-up text-xs"></i> 5단 추가
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-stone-500 mt-4 pt-3 border-t border-stone-200/60">
+              <button onclick="resetActivePartRow()" class="text-rose-500 hover:underline flex items-center gap-1">
+                <i class="fa-solid fa-rotate-left"></i> 해당 파트 초기화
+              </button>
+              <div class="flex items-center gap-2">
+                <span>직접 수정:</span>
+                <input type="number" id="activePartInput" min="0" onchange="setDirectActivePartRow(this.value)" class="w-16 px-2 py-1 bg-white border border-stone-300 rounded-lg text-center font-bold text-xs">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Parts Overview -->
+        <div class="bg-white rounded-2xl p-4 border border-yarn-sand/80">
+          <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wide mb-3 flex items-center justify-between">
+            <span><i class="fa-solid fa-list-check text-yarn-navy mr-1"></i> 전체 파트 진행 상황</span>
+            <span class="text-[11px] font-normal text-stone-400">클릭하여 해당 파트로 이동</span>
+          </h4>
+          <div id="drawerPartsOverviewGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <!-- Dynamic Part Cards -->
+          </div>
+        </div>
+
+        <!-- Specifications & Notes -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="bg-white p-3 rounded-xl border border-yarn-sand/60">
+            <span class="text-stone-400 block text-[11px]">실 (Yarn)</span>
+            <span id="drawerYarn" class="font-medium text-stone-700 truncate block">-</span>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-yarn-sand/60">
+            <span class="text-stone-400 block text-[11px]">바늘 (Needle)</span>
+            <span id="drawerNeedle" class="font-medium text-stone-700 truncate block">-</span>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-yarn-sand/60">
+            <span class="text-stone-400 block text-[11px]">게이지 (Gauge)</span>
+            <span id="drawerGauge" class="font-medium text-stone-700 truncate block">-</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 border border-yarn-sand/80">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wide flex items-center gap-1.5">
+              <i class="fa-regular fa-clipboard text-yarn-terracotta"></i> 노트 & 도안 정보
+            </h4>
+            <a id="drawerPatternLink" href="#" target="_blank" class="hidden text-xs text-yarn-terracotta hover:underline flex items-center gap-1">
+              <i class="fa-solid fa-link text-xs"></i> 도안 바로가기
+            </a>
+          </div>
+          <p id="drawerNotes" class="text-xs text-stone-600 bg-stone-50 p-3 rounded-xl leading-relaxed whitespace-pre-wrap">작성된 메모가 없습니다.</p>
+        </div>
+
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="bg-stone-100 px-6 py-3 border-t border-stone-200 flex items-center justify-between text-xs">
+        <button id="drawerDeleteBtn" onclick="" class="text-rose-600 hover:text-rose-800 font-medium flex items-center gap-1">
+          <i class="fa-regular fa-trash-can"></i> 삭제
+        </button>
+        <button id="drawerEditBtn" onclick="" class="px-4 py-1.5 bg-yarn-dark text-white hover:bg-stone-800 rounded-xl font-medium shadow-xs">
+          <i class="fa-solid fa-pen text-xs mr-1"></i> 프로젝트 수정
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-stone-800 text-white text-xs px-4 py-3 rounded-xl shadow-lg transition-all duration-300 transform translate-y-20 opacity-0 flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastMessage">변경사항이 저장되었습니다.</span>
+  </div>
+
+  <!-- Application Logic JS -->
+  <script>
+    const STORAGE_KEY = 'knittrack_pro_data_v3';
+
+    let projects = [];
+    let currentStatusFilter = 'ALL';
+    let activeProjectId = null;
+    let activePartIndex = 0;
+
+    // Helper: Formats YYYY-MM-DD
+    function getTodayString() {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+
+    // Helper: Formats +30 Days YYYY-MM-DD
+    function getFutureDateString(days = 30) {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return date.toISOString().split('T')[0];
+    }
+
+    // Sample Data with Dates and Parts
+    const sampleProjects = [
+      {
+        id: 'proj_topdown_sweater',
+        title: '라운드넥 라글란 니트 스웨터',
+        category: '의류',
+        yarn: '포근 램스울 6ply (오트밀 베이지)',
+        needle: '대바늘 4.0mm / 3.5mm',
+        gauge: '22코 30단',
+        status: 'IN_PROGRESS',
+        startDate: getTodayString(),
+        targetDate: getFutureDateString(20),
+        patternLink: 'https://example.com',
+        notes: '- 몸통 고무단 12단 후 메리야스 뜨기 전환\n- 소매 줄임: 8단마다 2코씩 총 8회',
+        parts: [
+          { name: '몸통 (Body)', currentRow: 85, targetRow: 140 },
+          { name: '왼쪽 소매 (Left Sleeve)', currentRow: 60, targetRow: 110 },
+          { name: '오른쪽 소매 (Right Sleeve)', currentRow: 20, targetRow: 110 },
+          { name: '목둘레 (Neckline)', currentRow: 15, targetRow: 15 }
+        ],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'proj_winter_hat',
+        title: '포근한 골지 모자',
+        category: '모자',
+        yarn: '울 100% (다크 그린)',
+        needle: '대바늘 4.5mm',
+        gauge: '18코 24단',
+        status: 'COMPLETED',
+        startDate: '2026-09-01',
+        targetDate: '2026-09-15',
+        patternLink: '',
+        notes: '접어 올리는 접단 부분 20단 작성 후 시작함.',
+        parts: [
+          { name: '본체 (Hat Body)', currentRow: 50, targetRow: 50 },
+          { name: '정수리 코줄임 (Crown)', currentRow: 12, targetRow: 12 }
+        ],
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    window.onload = function() {
+      loadProjects();
+      renderDashboard();
+    };
+
+    function loadProjects() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          projects = JSON.parse(stored);
+        } catch(e) {
+          console.error(e);
+          projects = sampleProjects;
+        }
+      } else {
+        projects = sampleProjects;
+        saveProjects();
+      }
+    }
+
+    function saveProjects() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    }
+
+    function calculateTotalProgress(parts) {
+      if (!parts || parts.length === 0) return 0;
+
+      let totalTarget = 0;
+      let totalCurrent = 0;
+
+      parts.forEach(part => {
+        const target = Math.max(1, part.targetRow || 1);
+        const current = Math.min(target, part.currentRow || 0);
+        totalTarget += target;
+        totalCurrent += current;
+      });
+
+      if (totalTarget === 0) return 0;
+      return Math.min(100, Math.round((totalCurrent / totalTarget) * 100));
+    }
+
+    // D-Day & Date Badge Calculation Helper
+    function getDDayInfo(project) {
+      if (project.status === 'COMPLETED') {
+        return { text: '✨ 완공 완료', bgClass: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+      }
+
+      if (!project.targetDate) {
+        return { text: '목표일 미지정', bgClass: 'bg-stone-100 text-stone-500 border-stone-200' };
+      }
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const target = new Date(project.targetDate);
+      target.setHours(0,0,0,0);
+
+      const diffTime = target - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        return { text: '🔥 D-Day (오늘 목표!)', bgClass: 'bg-amber-100 text-amber-800 border-amber-300 font-bold' };
+      } else if (diffDays > 0) {
+        return { text: `⏳ D-${diffDays}`, bgClass: 'bg-yarn-sand text-yarn-dark font-bold' };
+      } else {
+        return { text: `⚠️ D+${Math.abs(diffDays)} 초과`, bgClass: 'bg-rose-100 text-rose-800 border-rose-300 font-bold' };
+      }
+    }
+
+    function renderDashboard() {
+      const grid = document.getElementById('projectGrid');
+      const emptyState = document.getElementById('emptyState');
+      
+      const searchVal = (document.getElementById('searchInput').value || document.getElementById('mobileSearchInput').value || '').toLowerCase();
+      const categoryVal = document.getElementById('categoryFilter').value;
+
+      updateStatusCounts();
+
+      const filtered = projects.filter(p => {
+        const matchStatus = (currentStatusFilter === 'ALL') || (p.status === currentStatusFilter);
+        const matchCategory = (categoryVal === 'ALL') || (p.category === categoryVal);
+        const matchSearch = p.title.toLowerCase().includes(searchVal) ||
+                            (p.yarn && p.yarn.toLowerCase().includes(searchVal)) ||
+                            (p.needle && p.needle.toLowerCase().includes(searchVal));
+        return matchStatus && matchCategory && matchSearch;
+      });
+
+      grid.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+      } else {
+        emptyState.classList.remove('flex');
+        emptyState.classList.add('hidden');
+
+        filtered.forEach(project => {
+          grid.appendChild(createProjectCard(project));
+        });
+      }
+    }
+
+    function updateStatusCounts() {
+      document.getElementById('count-all').innerText = projects.length;
+      document.getElementById('count-in-progress').innerText = projects.filter(p => p.status === 'IN_PROGRESS').length;
+      document.getElementById('count-paused').innerText = projects.filter(p => p.status === 'PAUSED').length;
+      document.getElementById('count-completed').innerText = projects.filter(p => p.status === 'COMPLETED').length;
+    }
+
+    function createProjectCard(p) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-3xl p-5 border border-yarn-sand/80 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between';
+
+      const totalProgress = calculateTotalProgress(p.parts);
+      const dDayInfo = getDDayInfo(p);
+
+      let statusBadge = '';
+      if (p.status === 'IN_PROGRESS') {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">🧶 진행 중</span>';
+      } else if (p.status === 'PAUSED') {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">☕ 일시정지</span>';
+      } else {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">✨ 완료</span>';
+      }
+
+      // Render Sub-parts Snippet
+      let partsSnippetHTML = '';
+      if (p.parts && p.parts.length > 0) {
+        partsSnippetHTML = p.parts.slice(0, 3).map(part => {
+          const partPercent = part.targetRow > 0 ? Math.min(100, Math.round((part.currentRow / part.targetRow) * 100)) : 0;
+          return `
+            <div class="flex items-center justify-between text-[11px] text-stone-600 bg-stone-50 px-2.5 py-1 rounded-lg">
+              <span class="truncate max-w-[120px]">${escapeHtml(part.name)}</span>
+              <span class="font-semibold text-stone-700">${part.currentRow}/${part.targetRow || 0}단 (${partPercent}%)</span>
+            </div>
+          `;
+        }).join('');
+
+        if (p.parts.length > 3) {
+          partsSnippetHTML += `<div class="text-[10px] text-stone-400 text-right pr-1">+${p.parts.length - 3}개 파트 더보기</div>`;
+        }
+      }
+
+      // Format Date String for Card
+      const dateDisplay = p.startDate || p.targetDate 
+        ? `<div class="flex items-center gap-1.5 text-[11px] text-stone-500 my-2 bg-yarn-sand/30 p-2 rounded-xl border border-yarn-sand/40">
+             <i class="fa-regular fa-calendar text-yarn-terracotta"></i>
+             <span class="truncate">${p.startDate || '미정'} ~ ${p.targetDate || '미정'}</span>
+           </div>`
+        : '';
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] font-bold text-yarn-dark bg-yarn-sand px-2 py-0.5 rounded-md">${escapeHtml(p.category || '기타')}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] border ${dDayInfo.bgClass}">${dDayInfo.text}</span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <h3 onclick="openCounterDrawer('${p.id}')" class="text-base font-bold font-serif-title text-stone-800 hover:text-yarn-terracotta cursor-pointer transition line-clamp-1 mb-1">
+            ${escapeHtml(p.title)}
+          </h3>
+
+          ${dateDisplay}
+
+          <div class="space-y-1 text-xs text-stone-500 mb-3">
+            ${p.yarn ? `<p class="truncate"><i class="fa-solid fa-scroll text-stone-400 w-4"></i> ${escapeHtml(p.yarn)}</p>` : ''}
+            ${p.needle ? `<p class="truncate"><i class="fa-solid fa-wand-magic-sparkles text-stone-400 w-4"></i> ${escapeHtml(p.needle)}</p>` : ''}
+          </div>
+
+          <div class="space-y-1 mb-4">
+            ${partsSnippetHTML}
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-stone-100">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <span class="font-semibold text-stone-600">전체 종합 진행률</span>
+            <span class="text-yarn-terracotta font-extrabold font-serif-title text-sm">${totalProgress}%</span>
+          </div>
+
+          <div class="w-full bg-stone-100 h-2.5 rounded-full overflow-hidden mb-3">
+            <div class="bg-yarn-terracotta h-full rounded-full transition-all duration-300" style="width: ${totalProgress}%;"></div>
+          </div>
+
+          <button onclick="openCounterDrawer('${p.id}')" class="w-full py-2 bg-yarn-sand/70 hover:bg-yarn-sand text-yarn-dark rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-hand-pointer text-xs"></i> 파트별 카운터 열기
+          </button>
+        </div>
+      `;
+
+      return card;
+    }
+
+    function openProjectModal(projectId = null) {
+      const modal = document.getElementById('projectModal');
+      const form = document.getElementById('projectForm');
+      const modalTitle = document.getElementById('modalTitle');
+      const partsContainer = document.getElementById('formPartsContainer');
+
+      form.reset();
+      partsContainer.innerHTML = '';
+
+      if (projectId) {
+        const p = projects.find(item => item.id === projectId);
+        if (p) {
+          modalTitle.innerText = '프로젝트 수정';
+          document.getElementById('formProjectId').value = p.id;
+          document.getElementById('formTitle').value = p.title || '';
+          document.getElementById('formCategory').value = p.category || '의류';
+          document.getElementById('formStartDate').value = p.startDate || '';
+          document.getElementById('formTargetDate').value = p.targetDate || '';
+          document.getElementById('formYarn').value = p.yarn || '';
+          document.getElementById('formNeedle').value = p.needle || '';
+          document.getElementById('formGauge').value = p.gauge || '';
+          document.getElementById('formStatus').value = p.status || 'IN_PROGRESS';
+          document.getElementById('formPatternLink').value = p.patternLink || '';
+          document.getElementById('formNotes').value = p.notes || '';
+
+          if (p.parts && p.parts.length > 0) {
+            p.parts.forEach(part => addPartInputRow(part.name, part.targetRow, part.currentRow));
+          } else {
+            addDefaultPartRows();
+          }
+        }
+      } else {
+        modalTitle.innerText = '새 프로젝트 만들기';
+        document.getElementById('formProjectId').value = '';
+        document.getElementById('formStartDate').value = getTodayString();
+        document.getElementById('formTargetDate').value = getFutureDateString(30);
+        addDefaultPartRows();
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeProjectModal() {
+      document.getElementById('projectModal').classList.add('hidden');
+    }
+
+    function addDefaultPartRows() {
+      addPartInputRow('몸통 (Body)', 120, 0);
+      addPartInputRow('왼쪽 소매 (Left Sleeve)', 100, 0);
+      addPartInputRow('오른쪽 소매 (Right Sleeve)', 100, 0);
+      addPartInputRow('목둘레 (Neckline)', 15, 0);
+    }
+
+    function addPartInputRow(name = '', target = 0, current = 0) {
+      const container = document.getElementById('formPartsContainer');
+      const row = document.createElement('div');
+      row.className = 'part-input-row flex items-center gap-2 bg-stone-50 p-2 rounded-xl border border-stone-200';
+
+      row.innerHTML = `
+        <input type="text" placeholder="파트 이름 (예: 앞판, 카라)" value="${escapeHtml(name)}" required
+               class="part-name-input flex-1 px-2.5 py-1 text-xs bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-yarn-terracotta">
+        <div class="flex items-center gap-1">
+          <span class="text-[11px] text-stone-400">목표:</span>
+          <input type="number" min="1" placeholder="단수" value="${target || ''}" required
+                 class="part-target-input w-16 px-2 py-1 text-xs bg-white border border-stone-200 rounded-lg text-center focus:outline-none focus:ring-1 focus:ring-yarn-terracotta">
+          <span class="text-[11px] text-stone-400">단</span>
+        </div>
+        <input type="hidden" class="part-current-input" value="${current || 0}">
+        <button type="button" onclick="this.closest('.part-input-row').remove()" class="text-stone-400 hover:text-rose-500 px-1">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      `;
+
+      container.appendChild(row);
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('formProjectId').value;
+      const title = document.getElementById('formTitle').value.trim();
+
+      if (!title) return;
+
+      const partRows = document.querySelectorAll('.part-input-row');
+      const partsData = [];
+
+      partRows.forEach(row => {
+        const name = row.querySelector('.part-name-input').value.trim();
+        const targetRow = parseInt(row.querySelector('.part-target-input').value) || 0;
+        const currentRow = parseInt(row.querySelector('.part-current-input').value) || 0;
+
+        if (name) {
+          partsData.push({
+            name: name,
+            targetRow: targetRow,
+            currentRow: currentRow
+          });
+        }
+      });
+
+      if (id) {
+        const idx = projects.findIndex(p => p.id === id);
+        if (idx !== -1) {
+          projects[idx] = {
+            ...projects[idx],
+            title: title,
+            category: document.getElementById('formCategory').value,
+            startDate: document.getElementById('formStartDate').value,
+            targetDate: document.getElementById('formTargetDate').value,
+            yarn: document.getElementById('formYarn').value.trim(),
+            needle: document.getElementById('formNeedle').value.trim(),
+            gauge: document.getElementById('formGauge').value.trim(),
+            status: document.getElementById('formStatus').value,
+            patternLink: document.getElementById('formPatternLink').value.trim(),
+            notes: document.getElementById('formNotes').value.trim(),
+            parts: partsData
+          };
+          showToast('프로젝트 수정이 저장되었습니다.');
+        }
+      } else {
+        const newProj = {
+          id: 'proj_' + Date.now(),
+          title: title,
+          category: document.getElementById('formCategory').value,
+          startDate: document.getElementById('formStartDate').value,
+          targetDate: document.getElementById('formTargetDate').value,
+          yarn: document.getElementById('formYarn').value.trim(),
+          needle: document.getElementById('formNeedle').value.trim(),
+          gauge: document.getElementById('formGauge').value.trim(),
+          status: document.getElementById('formStatus').value,
+          patternLink: document.getElementById('formPatternLink').value.trim(),
+          notes: document.getElementById('formNotes').value.trim(),
+          parts: partsData,
+          createdAt: new Date().toISOString()
+        };
+        projects.unshift(newProj);
+        showToast('새 프로젝트가 추가되었습니다! 🧶');
+      }
+
+      saveProjects();
+      closeProjectModal();
+      renderDashboard();
+
+      if (activeProjectId && activeProjectId === id) {
+        openCounterDrawer(id);
+      }
+    }
+
+    function openCounterDrawer(projectId) {
+      const p = projects.find(item => item.id === projectId);
+      if (!p) return;
+
+      activeProjectId = projectId;
+      activePartIndex = 0;
+
+      updateDrawerUI();
+      document.getElementById('counterDrawer').classList.remove('hidden');
+    }
+
+    function closeCounterDrawer() {
+      document.getElementById('counterDrawer').classList.add('hidden');
+      activeProjectId = null;
+    }
+
+    function updateDrawerUI() {
+      const p = projects.find(item => item.id === activeProjectId);
+      if (!p) return;
+
+      document.getElementById('drawerCategoryTag').innerText = p.category || '기타';
+      document.getElementById('drawerTitle').innerText = p.title;
+
+      // Dates and D-Day Badge
+      document.getElementById('drawerStartDate').innerText = p.startDate || '미정';
+      document.getElementById('drawerTargetDate').innerText = p.targetDate || '미정';
+
+      const dDayInfo = getDDayInfo(p);
+      const dDayBadge = document.getElementById('drawerDDayBadge');
+      dDayBadge.innerText = dDayInfo.text;
+      dDayBadge.className = `px-3 py-1 rounded-full text-xs font-bold border ${dDayInfo.bgClass}`;
+
+      // Overall Progress Calculation
+      const totalProgress = calculateTotalProgress(p.parts);
+      document.getElementById('drawerTotalProgressPercent').innerText = `${totalProgress}%`;
+      document.getElementById('drawerTotalProgressBar').style.width = `${totalProgress}%`;
+
+      // Part Select Tabs
+      const tabsContainer = document.getElementById('drawerPartTabs');
+      tabsContainer.innerHTML = '';
+
+      if (p.parts && p.parts.length > 0) {
+        p.parts.forEach((part, index) => {
+          const btn = document.createElement('button');
+          const isSelected = index === activePartIndex;
+          btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            isSelected 
+              ? 'bg-yarn-terracotta text-white shadow-xs' 
+              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+          }`;
+          btn.onclick = () => {
+            activePartIndex = index;
+            updateDrawerUI();
+          };
+          btn.innerHTML = `
+            <span>${escapeHtml(part.name)}</span>
+            <span class="opacity-80 text-[10px] font-normal">(${part.currentRow}/${part.targetRow || 0})</span>
+          `;
+          tabsContainer.appendChild(btn);
+        });
+
+        // Current Active Part Display
+        const currentPart = p.parts[activePartIndex] || p.parts[0];
+        document.getElementById('activePartName').innerText = currentPart.name;
+        document.getElementById('activePartCurrentRow').innerText = currentPart.currentRow || 0;
+        document.getElementById('activePartInput').value = currentPart.currentRow || 0;
+        document.getElementById('activePartTargetRow').innerText = `/ ${currentPart.targetRow || 0}단`;
+
+        const partPercent = currentPart.targetRow > 0 ? Math.min(100, Math.round((currentPart.currentRow / currentPart.targetRow) * 100)) : 0;
+        document.getElementById('activePartProgressBar').style.width = `${partPercent}%`;
+      }
+
+      // All Parts Grid Overview
+      const overviewGrid = document.getElementById('drawerPartsOverviewGrid');
+      overviewGrid.innerHTML = '';
+      
+      p.parts.forEach((part, idx) => {
+        const percent = part.targetRow > 0 ? Math.min(100, Math.round((part.currentRow / part.targetRow) * 100)) : 0;
+        const isActive = idx === activePartIndex;
+
+        const partCard = document.createElement('div');
+        partCard.onclick = () => {
+          activePartIndex = idx;
+          updateDrawerUI();
+        };
+        partCard.className = `p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+          isActive ? 'bg-yarn-sand/40 border-yarn-terracotta ring-1 ring-yarn-terracotta/50' : 'bg-stone-50 border-stone-200 hover:bg-stone-100'
+        }`;
+
+        partCard.innerHTML = `
+          <div class="flex items-center justify-between font-bold mb-1">
+            <span class="text-stone-800 truncate">${escapeHtml(part.name)}</span>
+            <span class="${percent === 100 ? 'text-emerald-600' : 'text-yarn-terracotta'}">${percent}%</span>
+          </div>
+          <div class="flex items-center justify-between text-stone-500 text-[11px] mb-1.5">
+            <span>진행: ${part.currentRow}단</span>
+            <span>목표: ${part.targetRow}단</span>
+          </div>
+          <div class="w-full bg-stone-200 h-1.5 rounded-full overflow-hidden">
+            <div class="bg-yarn-olive h-full rounded-full" style="width: ${percent}%;"></div>
+          </div>
+        `;
+
+        overviewGrid.appendChild(partCard);
+      });
+
+      // Specifications & Notes
+      document.getElementById('drawerYarn').innerText = p.yarn || '미지정';
+      document.getElementById('drawerNeedle').innerText = p.needle || '미지정';
+      document.getElementById('drawerGauge').innerText = p.gauge || '미지정';
+
+      const notesElem = document.getElementById('drawerNotes');
+      notesElem.innerText = p.notes || '작성된 도안 메모가 없습니다.';
+
+      const linkElem = document.getElementById('drawerPatternLink');
+      if (p.patternLink) {
+        linkElem.href = p.patternLink;
+        linkElem.classList.remove('hidden');
+      } else {
+        linkElem.classList.add('hidden');
+      }
+
+      // Footer Actions
+      document.getElementById('drawerDeleteBtn').onclick = () => deleteProject(p.id);
+      document.getElementById('drawerEditBtn').onclick = () => {
+        closeCounterDrawer();
+        openProjectModal(p.id);
+      };
+    }
+
+    // Row Adjusters
+    function adjustActivePartRow(delta) {
+      if (!activeProjectId) return;
+      const p = projects.find(item => item.id === activeProjectId);
+      if (!p || !p.parts || !p.parts[activePartIndex]) return;
+
+      const part = p.parts[activePartIndex];
+      part.currentRow = Math.max(0, (part.currentRow || 0) + delta);
+
+      saveProjects();
+      renderDashboard();
+      updateDrawerUI();
+    }
+
+    function resetActivePartRow() {
+      if (!activeProjectId) return;
+      const p = projects.find(item => item.id === activeProjectId);
+      if (!p || !p.parts || !p.parts[activePartIndex]) return;
+
+      p.parts[activePartIndex].currentRow = 0;
+      saveProjects();
+      renderDashboard();
+      updateDrawerUI();
+      showToast(`${p.parts[activePartIndex].name} 파트 카운트가 초기화되었습니다.`);
+    }
+
+    function setDirectActivePartRow(val) {
+      if (!activeProjectId) return;
+      const p = projects.find(item => item.id === activeProjectId);
+      if (!p || !p.parts || !p.parts[activePartIndex]) return;
+
+      p.parts[activePartIndex].currentRow = Math.max(0, parseInt(val) || 0);
+      saveProjects();
+      renderDashboard();
+      updateDrawerUI();
+    }
+
+    function setFilterStatus(status) {
+      currentStatusFilter = status;
+      document.querySelectorAll('.filter-tab-btn').forEach(btn => {
+        btn.className = 'filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-medium text-stone-600 hover:bg-yarn-sand/50 transition';
+      });
+      const activeBtn = document.getElementById(`filter-${status}`);
+      if (activeBtn) {
+        activeBtn.className = 'filter-tab-btn px-3 py-1.5 rounded-2xl text-xs font-semibold bg-yarn-dark text-white shadow-xs';
+      }
+      renderDashboard();
+    }
+
+    function syncMobileSearch(val) {
+      document.getElementById('searchInput').value = val;
+      renderDashboard();
+    }
+
+    function deleteProject(id) {
+      const p = projects.find(item => item.id === id);
+      if (!p) return;
+
+      if (window.confirm(`'${p.title}' 프로젝트를 정말 삭제하시겠습니까?`)) {
+        projects = projects.filter(item => item.id !== id);
+        saveProjects();
+        closeCounterDrawer();
+        renderDashboard();
+        showToast('프로젝트가 삭제되었습니다.');
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMessage').innerText = msg;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
